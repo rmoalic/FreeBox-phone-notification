@@ -1,9 +1,7 @@
 import requests
 import json
 import platform
-import sys
 import time
-import dbm
 from hashlib import sha1
 import hmac
 
@@ -168,4 +166,19 @@ class FreeBox:
 
         calls = resp_data["result"]
         return calls
+
+    def get_call(self, id: int):
+        endpoint = f"{API_ENDPOINT}/v4/call/log/{id}"
+        resp = self.session.get(endpoint)
+
+        if resp.status_code != 200:
+            print(resp.status_code)
+            raise Exception("Unexpected response code")
+        resp_data = resp.json()
+
+        if resp_data["success"]:
+            return resp_data["result"]
+        else:
+            assert resp_data["error_code"] == "invalid_id"
+            return None
 

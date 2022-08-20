@@ -48,19 +48,18 @@ def main():
         sys.exit(1)
 
     print(f"Starting monitoring calls ({len(apobj)} notifications service)")
-    last_notified = None
+    calls = fb.get_calls()
+    last_call = None if len(calls) == 0 else calls[0]
+    next_call_id = 0
     while True:
-        calls = fb.get_calls()
-
-        last_call = None if len(calls) == 0 else calls[0]
-        
-        if last_notified != last_call["id"] and call_is_ringing(last_call):
-            last_notified = last_call["id"]
-            print("Notify!")
-            apobj.notify(title="Nouvel appel sur la ligne fixe",
-                         body=format_notification_body(last_call, cip))
+        if last_call is not None:
+            next_call_id = last_call["id"] + 1
+            if call_is_ringing(last_call):
+                apobj.notify(title="Nouvel appel sur la ligne fixe",
+                             body=format_notification_body(last_call, cip))
         time.sleep(POLLING_TIME)
-    
+        last_call = fb.get_call(next_call_id)
+
 
 if __name__ == "__main__":
     main()
