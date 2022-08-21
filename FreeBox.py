@@ -5,26 +5,41 @@ import platform
 import time
 from hashlib import sha1
 import hmac
-
-APP_ID = "fr.polms.phone_notification"
-APP_NAME = "Phone notification"
-APP_VERSION = "0.0.1"
+import path
+from dataclasses import dataclass, asdict
 
 API_PROTOCOL = "http"
 API_HOST = "mafreebox.freebox.fr" # gl4kx4wl.fbxos.fr:47865
 API_ENDPOINT = f"{API_PROTOCOL}://{API_HOST}/api"
 
-TOKEN_STORE = "FreeBox.store"
-
 class FreeBoxNoAuthorizationException(Exception):
     pass
 
-class FreeBox:
+class FreeBoxMultipleInstancesException(Exception):
+    pass
 
-    def __init__(self):
+@dataclass(frozen=True)
+class FreeBox_app_info:
+    app_id: str
+    app_name: str
+    app_version: str
+    device_name: str
+
+class FreeBox:
+    instances_info: list[FreeBox_app_info] = []
+
+    def __init__(self, app_id: str, app_name: str, app_version: str):
+        self.app_info = FreeBox_app_info(app_id, app_name, app_version, platform.node())
+        for instance in FreeBox.instances_info:
+            if instance.app_id == app_id:
+                # Cannot have two instances with same id, because of the concurrent access to the token_store file
+                raise FreeBoxMultipleInstancesException()
+        FreeBox.instances_info.append(self.app_info)
+
         self.stored_app_token = None
+        self.token_store = path.Path(f"FreeBox_{app_id}.store")
         try:
-            with open(TOKEN_STORE, "r") as f:
+            with open(self.token_store, "r") as f:
                 self.stored_app_token = f.read()
         except FileNotFoundError:
             pass
@@ -32,25 +47,22 @@ class FreeBox:
         self.session.hooks['response'].append(self._refresh_token)
 
     def __del__(self):
-        pass
+        if self.app_info in FreeBox.instances_info:
+            FreeBox.instances_info.remove(self.app_info)
         #self._close_session() # 404 error
-    
-    def _request_authotize():
-        req =  {
-            "app_id": APP_ID,
-            "app_name": APP_NAME,
-            "app_version": APP_VERSION,
-            "device_name": platform.node()
-        }
+
+    @staticmethod
+    def _request_authotize(app_info: FreeBox_app_info) -> tuple[str, str]:
         endpoint = f"{API_ENDPOINT}/v4/login/authorize/"
-        resp = requests.post(endpoint, data=json.dumps(req))
+        resp = requests.post(endpoint, data=json.dumps(asdict(app_info)))
         if resp.status_code != 200:
             raise Exception("Unexpected response code")
 
         resp_data = resp.json()
         return (resp_data["result"]["app_token"], resp_data["result"]["track_id"])
 
-    def _wait_for_authorization(track_id: str):
+    @staticmethod
+    def _wait_for_authorization(track_id: str) -> str | None:
         endpoint = f"{API_ENDPOINT}/v4/login/authorize/{track_id}"
         status = ""
         challenge = ""
@@ -74,9 +86,10 @@ class FreeBox:
             print(f"autorization not granted: {status}")
             return None
 
-    def _open_session(password):
+    @staticmethod
+    def _open_session(app_id: str, password: str) -> tuple[str, str]:
         req = {
-            "app_id": APP_ID,
+            "app_id": app_id,
             "password": password
         }
         endpoint = f"{API_ENDPOINT}/v4/login/session/"
@@ -91,7 +104,7 @@ class FreeBox:
         
         return (resp_data["result"]["session_token"], resp_data["result"]["permissions"])
 
-    def _close_session(self):
+    def _close_session(self) -> bool:
         endpoint = f"{API_ENDPOINT}/v4/login/logout/"
         resp = self.session.get(endpoint)
         if resp.status_code != 200:
@@ -99,8 +112,9 @@ class FreeBox:
         resp_data = resp.json()
         print(resp_data)
         assert resp_data["success"] == True
-        
-    def _get_challenge():
+
+    @staticmethod
+    def _get_challenge() -> str:
         endpoint = f"{API_ENDPOINT}/v4/login/"
         resp = requests.get(endpoint)
         
@@ -112,7 +126,7 @@ class FreeBox:
             print("get_challenge: Already logged in")
         return resp_data["result"]["challenge"]
 
-    def _get_password(self):
+    def _get_password(self) -> str:
         if self.stored_app_token is None:
             raise FreeBoxNoAuthorizationException()
         
@@ -125,9 +139,9 @@ class FreeBox:
         password = hmac.new(app_token.encode("utf-8"), challenge.encode("utf-8"), sha1).hexdigest()
         return password
 
-    def login(self):
+    def login(self) -> str:
         password = self._get_password()
-        session_token, session_permissions = FreeBox._open_session(password)
+        session_token, session_permissions = FreeBox._open_session(self.app_info.app_id, password)
         if session_token is None:
             raise FreeBoxNoAuthorizationException()
         self.session.headers.update({"X-Fbx-App-Auth": session_token})
@@ -139,7 +153,7 @@ class FreeBox:
             res.request.headers.update(self.session.headers)
             return self.session.send(res.request)
     
-    def easy_login(self):
+    def easy_login(self) -> str | None:
         try_count = 0
         while try_count <= 1:
             try:
@@ -147,16 +161,17 @@ class FreeBox:
                 return session_token
             except FreeBoxNoAuthorizationException:
                 print("Autorization needed, select YES on the FreeBox front panel")
-                app_token, track_id = FreeBox._request_authotize()
+                app_token, track_id = FreeBox._request_authotize(self.app_info)
                 challenge = FreeBox._wait_for_authorization(track_id)
                 if challenge is not None:
                     self.stored_app_token = app_token
-                    with open(TOKEN_STORE, "w") as f:
+                    with open(self.token_store, "w") as f:
                         f.write(app_token)
             try_count = try_count + 1
+        return None
 
 
-    def get_calls(self):
+    def get_calls(self) -> dict:
         endpoint = f"{API_ENDPOINT}/v4/call/log/"
         resp = self.session.get(endpoint)
 
@@ -168,7 +183,7 @@ class FreeBox:
         calls = resp_data["result"]
         return calls
 
-    def get_call(self, id: int):
+    def get_call(self, id: int) -> dict | None:
         endpoint = f"{API_ENDPOINT}/v4/call/log/{id}"
         resp = self.session.get(endpoint)
 

@@ -32,7 +32,9 @@ def format_notification_body(call, cip: CallInfoService):
         return f"{call['name']} ({call['number']})"
 
 def main():
-    fb = FreeBox()
+    fb = FreeBox(app_id="fr.polms.phone_notification",
+                 app_name="Phone notification",
+                 app_version="0.0.1")
     fb.easy_login()
 
     from CallInfo import CallInfoProviderDummy
