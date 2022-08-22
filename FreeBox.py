@@ -5,7 +5,7 @@ import platform
 import time
 from hashlib import sha1
 import hmac
-import path
+from pathlib import Path
 from dataclasses import dataclass, asdict
 
 API_PROTOCOL = "http"
@@ -37,7 +37,7 @@ class FreeBox:
         FreeBox.instances_info.append(self.app_info)
 
         self.stored_app_token = None
-        self.token_store = path.Path(f"FreeBox_{app_id}.store")
+        self.token_store = Path(f"FreeBox_{app_id}.store")
         try:
             with open(self.token_store, "r") as f:
                 self.stored_app_token = f.read()
