@@ -26,6 +26,5 @@ Les autorisations peuvent être gérées sur la freebox sur [la page dédiée](h
 TODO
 ----
 * Async requests
-* event-based architecture
 * packaging
 
