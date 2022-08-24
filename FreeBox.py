@@ -8,9 +8,12 @@ import hmac
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
-API_PROTOCOL = "http"
+API_PROTOCOL = "https"
 API_HOST = "mafreebox.freebox.fr"  # gl4kx4wl.fbxos.fr:47865
 API_ENDPOINT = f"{API_PROTOCOL}://{API_HOST}/api"
+CA_FILE = "freebox_ca.pem"
+global_session = requests.Session()
+global_session.verify = CA_FILE
 
 
 class FreeBoxNoAuthorizationException(Exception):
@@ -48,6 +51,7 @@ class FreeBox:
         except FileNotFoundError:
             pass
         self.session = requests.Session()
+        self.session.verify = CA_FILE
         self.session.hooks['response'].append(self._refresh_token)
 
     def __del__(self):
@@ -57,7 +61,7 @@ class FreeBox:
     @staticmethod
     def _request_authotize(app_info: FreeBox_app_info) -> tuple[str, str]:
         endpoint = f"{API_ENDPOINT}/v4/login/authorize/"
-        resp = requests.post(endpoint, data=json.dumps(asdict(app_info)))
+        resp = global_session.post(endpoint, data=json.dumps(asdict(app_info)))
         if resp.status_code != 200:
             raise Exception("Unexpected response code")
 
@@ -71,7 +75,7 @@ class FreeBox:
         challenge = ""
 
         while True:
-            resp = requests.get(endpoint)
+            resp = global_session.get(endpoint)
             if resp.status_code != 200:
                 raise Exception("Unexpected response code")
             resp_data = resp.json()
@@ -97,7 +101,7 @@ class FreeBox:
         }
         endpoint = f"{API_ENDPOINT}/v4/login/session/"
 
-        resp = requests.post(endpoint, data=json.dumps(req))
+        resp = global_session.post(endpoint, data=json.dumps(req))
         if resp.status_code != 200:
             if resp.status_code == 403:
                 raise FreeBoxNoAuthorizationException()
@@ -119,7 +123,7 @@ class FreeBox:
     @staticmethod
     def _get_challenge() -> str:
         endpoint = f"{API_ENDPOINT}/v4/login/"
-        resp = requests.get(endpoint)
+        resp = global_session.get(endpoint)
 
         if resp.status_code != 200:
             raise Exception("Unexpected response code")
