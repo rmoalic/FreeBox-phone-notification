@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import abc
 import datetime
 
+
 @dataclass
 class CallInfo:
     name: str = ""
@@ -22,13 +23,18 @@ class CallInfoProvider(abc.ABC):
 class CallInfoProviderToto(CallInfoProvider):
 
     def reverse_search(self, number: str) -> CallInfo | None:
-        return CallInfo(name="Toto Dupond", activity="Particulier", address="01 rue de la paix MONTREUIL 93100", spam_text="Pas de spam")
-    
+        return CallInfo(name="Toto Dupond",
+                        activity="Particulier",
+                        address="01 rue de la paix MONTREUIL 93100",
+                        spam_text="Pas de spam")
+
+
 class CallInfoProviderDummy(CallInfoProvider):
 
     def reverse_search(self, number: str) -> CallInfo | None:
         return None
-    
+
+
 class CallInfoService:
 
     def __init__(self, provider: CallInfoProvider):

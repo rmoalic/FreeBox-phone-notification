@@ -1,8 +1,10 @@
 import apprise
 from CallInfo import CallInfoService, CallInfoProviderDummy
 
+
 class NoNotificationServiceException(Exception):
     pass
+
 
 class Notification:
 
@@ -41,4 +43,3 @@ class Notification:
         print(f"new call received: {call}")
         self.apobj.notify(title="Nouvel appel sur la ligne fixe",
                           body=self.format_notification_body(call))
-

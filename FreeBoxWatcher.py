@@ -2,18 +2,21 @@ from FreeBox import FreeBox
 import asyncio
 import enum
 
+
 def call_is_ringing(call):
     return call["type"] == "missed" and call["duration"] == 0
 
+
 CALLS_POLL_INTERVAL = 1
 
+
 class FreeBoxEvent(enum.Enum):
-    NEW_CALL=0
+    NEW_CALL = 0
 
 
 class FreeBoxWatcher:
 
-    def __init__(self, fb: FreeBox, event_loop = None):
+    def __init__(self, fb: FreeBox, event_loop=None):
         self.fb = fb
         self.loop = event_loop if event_loop is not None else asyncio.get_event_loop()
         self.running_poll_new_calls_task = None
@@ -23,7 +26,7 @@ class FreeBoxWatcher:
 
     def register(self, event: FreeBoxEvent, fun):
         if event == FreeBoxEvent.NEW_CALL:
-            if self.running_poll_new_calls_task == None:
+            if self.running_poll_new_calls_task is None:
                 self.running_poll_new_calls_task = self.loop.create_task(self._poll_new_calls())
             self.watcher[event].add(fun)
         else:
@@ -50,4 +53,3 @@ class FreeBoxWatcher:
                     self._notify(FreeBoxEvent.NEW_CALL, last_call)
             await asyncio.sleep(CALLS_POLL_INTERVAL)
             last_call = self.fb.get_call(next_call_id)
-

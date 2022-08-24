@@ -5,6 +5,7 @@ from FreeBoxWatcher import FreeBoxWatcher, FreeBoxEvent
 from CallInfo import CallInfoService
 from Notification import Notification, NoNotificationServiceException
 
+
 def main():
     loop = asyncio.new_event_loop()
 
@@ -39,6 +40,7 @@ def main():
             except asyncio.exceptions.CancelledError:
                 pass
         loop.close()
+
 
 if __name__ == "__main__":
     try:

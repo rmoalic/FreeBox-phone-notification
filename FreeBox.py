@@ -9,14 +9,17 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 
 API_PROTOCOL = "http"
-API_HOST = "mafreebox.freebox.fr" # gl4kx4wl.fbxos.fr:47865
+API_HOST = "mafreebox.freebox.fr"  # gl4kx4wl.fbxos.fr:47865
 API_ENDPOINT = f"{API_PROTOCOL}://{API_HOST}/api"
+
 
 class FreeBoxNoAuthorizationException(Exception):
     pass
 
+
 class FreeBoxMultipleInstancesException(Exception):
     pass
+
 
 @dataclass(frozen=True)
 class FreeBox_app_info:
@@ -24,6 +27,7 @@ class FreeBox_app_info:
     app_name: str
     app_version: str
     device_name: str
+
 
 class FreeBox:
     instances_info: list[FreeBox_app_info] = []
@@ -49,7 +53,6 @@ class FreeBox:
     def __del__(self):
         if self.app_info in FreeBox.instances_info:
             FreeBox.instances_info.remove(self.app_info)
-        #self._close_session() # 404 error
 
     @staticmethod
     def _request_authotize(app_info: FreeBox_app_info) -> tuple[str, str]:
@@ -66,7 +69,7 @@ class FreeBox:
         endpoint = f"{API_ENDPOINT}/v4/login/authorize/{track_id}"
         status = ""
         challenge = ""
-        
+
         while True:
             resp = requests.get(endpoint)
             if resp.status_code != 200:
@@ -93,15 +96,15 @@ class FreeBox:
             "password": password
         }
         endpoint = f"{API_ENDPOINT}/v4/login/session/"
-        
+
         resp = requests.post(endpoint, data=json.dumps(req))
         if resp.status_code != 200:
             if resp.status_code == 403:
                 raise FreeBoxNoAuthorizationException()
             raise Exception("Unexpected response code")
-        
+
         resp_data = resp.json()
-        
+
         return (resp_data["result"]["session_token"], resp_data["result"]["permissions"])
 
     def _close_session(self) -> bool:
@@ -111,25 +114,25 @@ class FreeBox:
             raise Exception("Unexpected response code")
         resp_data = resp.json()
         print(resp_data)
-        assert resp_data["success"] == True
+        assert resp_data["success"]
 
     @staticmethod
     def _get_challenge() -> str:
         endpoint = f"{API_ENDPOINT}/v4/login/"
         resp = requests.get(endpoint)
-        
+
         if resp.status_code != 200:
             raise Exception("Unexpected response code")
         resp_data = resp.json()
 
-        if resp_data["result"]["logged_in"] == True:
+        if resp_data["result"]["logged_in"]:
             print("get_challenge: Already logged in")
         return resp_data["result"]["challenge"]
 
     def _get_password(self) -> str:
         if self.stored_app_token is None:
             raise FreeBoxNoAuthorizationException()
-        
+
         app_token = self.stored_app_token
         challenge = FreeBox._get_challenge()
 
@@ -146,13 +149,13 @@ class FreeBox:
             raise FreeBoxNoAuthorizationException()
         self.session.headers.update({"X-Fbx-App-Auth": session_token})
         return session_token
-    
+
     def _refresh_token(self, res, *args, **kwargs):
         if res.status_code == 403:
             self.login()
             res.request.headers.update(self.session.headers)
             return self.session.send(res.request)
-    
+
     def easy_login(self) -> str | None:
         try_count = 0
         while try_count <= 1:
@@ -169,7 +172,6 @@ class FreeBox:
                         f.write(app_token)
             try_count = try_count + 1
         return None
-
 
     def get_calls(self) -> dict:
         endpoint = f"{API_ENDPOINT}/v4/call/log/"
@@ -197,4 +199,3 @@ class FreeBox:
         else:
             assert resp_data["error_code"] == "invalid_id"
             return None
-
