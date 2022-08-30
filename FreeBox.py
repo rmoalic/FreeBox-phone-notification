@@ -59,6 +59,15 @@ class FreeBox:
             FreeBox.instances_info.remove(self.app_info)
 
     @staticmethod
+    def is_ready():
+        endpoint = f"{API_PROTOCOL}://{API_HOST}/api_version"
+        try:
+            global_session.get(endpoint)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
     def _request_authotize(app_info: FreeBox_app_info) -> tuple[str, str]:
         endpoint = f"{API_ENDPOINT}/v4/login/authorize/"
         resp = global_session.post(endpoint, data=json.dumps(asdict(app_info)))

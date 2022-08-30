@@ -43,7 +43,11 @@ class FreeBoxWatcher:
             w(*args, **kwds)
 
     async def _poll_new_calls(self):
-        calls = self.fb.get_calls()
+        try:
+            calls = self.fb.get_calls()
+        except Exception as e:
+            print(f"Exception while fetching calls {e}")
+            return None
         last_call = None if len(calls) == 0 else calls[0]
         next_call_id = 0
         while True:
@@ -52,4 +56,7 @@ class FreeBoxWatcher:
                 if call_is_ringing(last_call):
                     self._notify(FreeBoxEvent.NEW_CALL, last_call)
             await asyncio.sleep(CALLS_POLL_INTERVAL)
-            last_call = self.fb.get_call(next_call_id)
+            try:
+                last_call = self.fb.get_call(next_call_id)
+            except Exception as e:
+                print(f"Exception while fetching new calls {e}")

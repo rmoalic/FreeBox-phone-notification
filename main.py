@@ -1,9 +1,20 @@
 import sys
+import time
 import asyncio
 from FreeBox import FreeBox
 from FreeBoxWatcher import FreeBoxWatcher, FreeBoxEvent
 from CallInfo import CallInfoService
 from Notification import Notification, NoNotificationServiceException
+
+
+def wait_for_freebox_ready(fb: FreeBox) -> bool:
+    try_attempts = 0
+    while not fb.is_ready():
+        time.sleep(2)
+        if try_attempts > 150:  # 150 * 2 sec is 5 minutes
+            return False
+        try_attempts = try_attempts + 1
+    return True
 
 
 def main():
@@ -12,6 +23,9 @@ def main():
     fb = FreeBox(app_id="fr.polms.phone_notification",
                  app_name="Phone notification",
                  app_version="0.0.1")
+    if not wait_for_freebox_ready(fb):
+        print("Freebox is not ready after 5 minutes.")
+        sys.exit(1)
     fb.easy_login()
 
     from CallInfo import CallInfoProviderDummy
