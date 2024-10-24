@@ -1,1 +1,3 @@
 urls:
+  - json://192.168.1.60:7979/notify?:attachments&:type&:version&:duration=20&:position=2&:titleColor=%23a233cc&:titleSize=20&:messageColor=%23000000&:messageSize=15&:backgroundColor=%23eededede
+  - dbus://

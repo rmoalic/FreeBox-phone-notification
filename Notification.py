@@ -43,3 +43,9 @@ class Notification:
         print(f"new call received: {call}")
         self.apobj.notify(title="Nouvel appel sur la ligne fixe",
                           body=self.format_notification_body(call))
+
+    def _test_notify(self):
+        import logging
+        with apprise.LogCapture(level=logging.TRACE) as captured:
+            self.apobj.notify(title="notification de test", body="test 123")
+            print(captured.getvalue())
