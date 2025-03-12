@@ -2,7 +2,7 @@ import sys
 import time
 import asyncio
 from FreeBox import FreeBox
-from FreeBoxWatcher import FreeBoxWatcher, FreeBoxEvent
+from FreeBoxWatcher import FreeBoxWatcher_Call, FreeBoxWatcher_VoiceMail
 from CallInfo import CallInfoService
 from Notification import Notification, NoNotificationServiceException
 
@@ -37,10 +37,13 @@ def main():
         print("No notification service loaded, edit apprise `notify_config.yml`")
         sys.exit(1)
 
-    fbw = FreeBoxWatcher(fb, loop)
-    fbw.register(FreeBoxEvent.NEW_CALL, notif.new_call_notify)
+    fbw_call = FreeBoxWatcher_Call(fb, loop)
+    fbw_call.register(notif.new_call_notify)
 
-    print("Starting monitoring calls")
+    fbw_voicemail = FreeBoxWatcher_VoiceMail(fb, loop)
+    fbw_voicemail.register(notif.new_voicemail_notify)
+
+    print("Starting monitoring")
 
     try:
         loop.run_forever()

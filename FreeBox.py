@@ -1,5 +1,8 @@
 from __future__ import annotations
 import requests
+import tempfile
+import re
+import os
 import json
 import platform
 import time
@@ -212,3 +215,28 @@ class FreeBox:
         else:
             assert resp_data["error_code"] == "invalid_id"
             return None
+
+    def get_voicemails(self) -> dict:
+        endpoint = f"{API_ENDPOINT}/v11/call/voicemail/"
+        resp = self.session.get(endpoint)
+
+        if resp.status_code != 200:
+            print(resp.status_code)
+            raise Exception("Unexpected response code")
+        resp_data = resp.json()
+        return resp_data["result"]
+
+    def download_voicemail(self, id: str) -> str:
+        endpoint = f"{API_ENDPOINT}/v11/call/voicemail/{id}/audio_file"
+        resp = self.session.get(endpoint)
+
+        if resp.status_code != 200:
+            print(resp.status_code)
+            raise Exception("Unexpected response code")
+
+        file_name_re = re.findall('filename=\"(.+)\"', resp.headers.get("Content-Disposition"))
+        file_name = "_" + file_name_re[0] if len(file_name_re) > 0 else "__"
+        fd, path = tempfile.mkstemp(prefix="fb_voicemail_", suffix=file_name)
+        os.write(fd, resp.content)
+        os.close(fd)
+        return path

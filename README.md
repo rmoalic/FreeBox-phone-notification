@@ -1,7 +1,7 @@
 Notification d'appel sur freebox
 ================================
 
-Ce projet utilise [l'API v4 de FreeboxOS](https://dev.freebox.fr/sdk/os/#=).
+Ce projet utilise [l'API v4 de FreeboxOS](https://dev.freebox.fr/sdk/os/#=) ainsi que [l'API V11](https://mafreebox.freebox.fr/#Fbx.os.app.help.app) pour le répondeur.
 
 Quand un appel entrant est détecté sur la ligne fixe, une notification est envoyée à un des services de notification enregistré dans [Apprise](https://github.com/caronc/apprise).
 

@@ -1,5 +1,6 @@
 import apprise
 from CallInfo import CallInfoService, CallInfoProviderDummy
+import datetime
 
 
 class NoNotificationServiceException(Exception):
@@ -18,7 +19,7 @@ class Notification:
         if len(self.apobj) == 0:
             raise NoNotificationServiceException()
 
-    def format_notification_body(self, call):
+    def format_notification_body_call(self, call):
         if call["contact_id"] != 0:
             return f"{call['name']} ({call['number']})"
         try:
@@ -39,10 +40,21 @@ class Notification:
                 ret += f"\n{call_info.spam_text}"
             return ret
 
+    def format_notification_body_vm(self, vm):
+        duration = str(datetime.timedelta(seconds=vm['duration']))
+        date = str(datetime.datetime.fromtimestamp(vm['date']))
+        return f"+({vm['country_code']}) {vm['phone_number']}\ndurée: {duration}\ndate: {date}"
+
     def new_call_notify(self, call: dict):
         print(f"new call received: {call}")
         self.apobj.notify(title="Nouvel appel sur la ligne fixe",
-                          body=self.format_notification_body(call))
+                          body=self.format_notification_body_call(call))
+
+    def new_voicemail_notify(self, vm: dict):
+        print(f"new voicemail received: {vm}")
+        self.apobj.notify(title="Nouveau message sur le répondeur de la ligne fixe",
+                          body=self.format_notification_body_vm(vm),
+                          attach=vm["path"])
 
     def _test_notify(self):
         import logging
