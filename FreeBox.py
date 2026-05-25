@@ -213,7 +213,8 @@ class FreeBox:
         if resp_data["success"]:
             return resp_data["result"]
         else:
-            assert resp_data["error_code"] == "invalid_id"
+            # since version v4.11 it return generic error_code "exception happen while computing the query"
+            # assert resp_data["error_code"] == "invalid_id"
             return None
 
     def get_voicemails(self) -> dict:
